@@ -164,15 +164,13 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         states = self.mdp.getStates()
         for i in range(times):
             state = states[i % len(states)]
-            if self.mdp.isTerminal(state):
-                continue
-            maxValue = -99999
-            for action in self.mdp.getPossibleActions(state):
-                actionValue = 0
-                for nextState, prob in self.mdp.getTransitionStatesAndProbs(state, action):
-                    actionValue += prob * (self.mdp.getReward(state, action, nextState) +
-                                           self.discount * self.values[nextState])
-                    maxValue = max(maxValue, actionValue)
+            if not self.mdp.isTerminal(state):
+                maxValue = -99999
+                for action in self.mdp.getPossibleActions(state):
+                    Q = self.computeQValueFromValues(state, action)
+
+                    if Q > maxValue:
+                        maxValue = Q
                 self.values[state] = maxValue
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
@@ -219,7 +217,7 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
 
                 pq.update(s, -diff)
 
-        for i in range(self.iterations):
+        for _ in range(self.iterations):
             if pq.isEmpty():
                 break
             s = pq.pop()
@@ -227,8 +225,8 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
                 maxValue = -99999
                 for action in self.mdp.getPossibleActions(s):
                     Q = self.computeQValueFromValues(s, action)
-                    if Q > maxQ:
-                        maxQ = Q
+                    if Q > maxValue:
+                        maxValue = Q
                 self.values[s] = maxValue
             for p in predecessors[s]:
                 maxQ = -99999
@@ -239,5 +237,4 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
                 d = abs(maxQ - self.values[p])
                 if d > self.theta:
                     pq.update(p, -d)
-
-
+        
